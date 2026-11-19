@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgroScribe AI – Plant Disease Detection</title>
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2909/2909763.png">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2909/2909763.png">
+<link rel="shortcut icon" href="https://cdn-icons-png.flaticon.com/512/2909/2909763.png" type="image/png">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --green-50: #edfaf2;
+  --green-100: #c6f0d8;
+  --green-400: #22c55e;
+  --green-600: #16a34a;
+  --green-800: #166534;
+  --green-900: #14532d;
+  --earth-50: #fdf8f1;
+  --earth-200: #e8d5b7;
+  --earth-600: #a16207;
+  --amber-400: #f59e0b;
+  --amber-600: #d97706;
+  --red-400: #ef4444;
+  --red-600: #dc2626;
+  --blue-400: #3b82f6;
+  --blue-600: #2563eb;
+  --surface: rgba(255,255,255,0.92);
+  --surface-dark: rgba(20,60,20,0.08);
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --shadow-soft: 0 4px 32px rgba(20,83,45,0.10), 0 1px 4px rgba(20,83,45,0.06);
+  --shadow-card: 0 8px 40px rgba(20,83,45,0.13), 0 2px 8px rgba(20,83,45,0.07);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0d2818;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated nature background */
+.bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(34,197,94,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(16,185,129,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(22,163,74,0.07) 0%, transparent 70%),
+    linear-gradient(160deg, #0d2818 0%, #0f3d1e 30%, #133a1b 60%, #0a2010 100%);
+  animation: bgPulse 12s ease-in-out infinite;
+}
+
+@keyframes bgPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.08); }
+}
+
+/* Floating leaf particles */
+.leaf-particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1;
+  font-size: 18px;
+  opacity: 0.12;
+  animation: floatLeaf linear infinite;
+}
+
+@keyframes floatLeaf {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.12; }
+  90% { opacity: 0.12; }
+  100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
+}
+
+/* ──── Main layout ──── */
+.wrapper {
+  position: relative;
+  z-index: 10;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+/* ──── Hero Header ──── */
+.hero {
+  text-align: center;
+  padding: 48px 20px 40px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 99px;
+  padding: 6px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #86efac;
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(38px, 6vw, 68px);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 14px;
+  animation: titleFloat 4s ease-in-out infinite;
+}
+
+.hero-title span {
+  background: linear-gradient(135deg, #86efac, #22c55e, #4ade80);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes titleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.hero-subtitle {
+  font-size: 17px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* ──── Stats Row ──── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.stat-chip {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+
+.stat-chip .val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #4ade80;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-chip .lbl {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+/* ──── Glass Card ──── */
+.glass-card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(255,255,255,0.5);
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(16px);
+}
+
+.glass-card.dark {
+  background: rgba(14,42,20,0.75);
+  border-color: rgba(34,197,94,0.18);
+  color: #fff;
+}
+
+.card-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.icon-green { background: var(--green-50); color: var(--green-600); }
+.icon-blue { background: #eff6ff; color: var(--blue-600); }
+.icon-amber { background: #fffbeb; color: var(--amber-600); }
+.icon-red { background: #fff1f2; color: var(--red-600); }
+
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a2e1a;
+  margin: 0;
+}
+
+.glass-card.dark .card-title { color: #fff; }
+
+/* ──── Upload Zone ──── */
+.upload-zone {
+  border: 2px dashed rgba(34,197,94,0.35);
+  border-radius: var(--radius-lg);
+  background: var(--green-50);
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--green-400);
+  background: rgba(34,197,94,0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(34,197,94,0.15);
+}
+
+.upload-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green-400), var(--green-600));
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: white;
+  animation: iconPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+}
+
+.upload-text { font-size: 15px; font-weight: 600; color: var(--green-800); margin-bottom: 4px; }
+.upload-hint { font-size: 12px; color: #6b7280; }
+
+#fileInput { display: none; }
+
+/* Preview */
+.preview-wrapper {
+  display: none;
+  margin-top: 16px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+}
+
+.preview-wrapper img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* ──── Predict Button ──── */
+.predict-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 28px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-top: 18px;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 20px rgba(34,197,94,0.35);
+}
+
+.predict-btn:hover {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(34,197,94,0.45);
+}
+
+.predict-btn:active { transform: scale(0.98); }
+
+/* ──── Result Card ──── */
+.result-card {
+  display: none;
+}
+
+.disease-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #fff3cd, #ffd966);
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 99px;
+  margin-bottom: 12px;
+}
+
+.confidence-bar {
+  background: #e5e7eb;
+  border-radius: 99px;
+  height: 10px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 99px;
+  transition: width 1.2s cubic-bezier(0.34,1.56,0.64,1);
+  width: 0%;
+}
+
+.result-image {
+  width: 100%;
+  border-radius: var(--radius-md);
+  max-height: 260px;
+  object-fit: cover;
+}
+
+/* Urgency colours */
+.urgency-high { background: #fff1f2; border-left: 4px solid var(--red-400); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 16px 18px; }
+.urgency-medium { background: #fffbeb; border-left: 4px solid var(--amber-400); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 16px 18px; }
+.urgency-low { background: var(--green-50); border-left: 4px solid var(--green-400); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 16px 18px; }
+
+.rec-title { font-weight: 700; font-size: 14px; color: #374151; margin-bottom: 10px; }
+.rec-item { font-size: 13px; color: #4b5563; line-height: 1.7; margin-bottom: 4px; }
+.rec-item strong { color: #111827; }
+
+/* ──── Weather ──── */
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.weather-temp {
+  font-size: 52px;
+  font-weight: 800;
+  color: #1a2e1a;
+  line-height: 1;
+}
+
+.weather-icon-big {
+  font-size: 48px;
+}
+
+.weather-details { flex: 1; }
+.weather-city { font-size: 18px; font-weight: 700; color: #1a2e1a; }
+.weather-desc { font-size: 13px; color: #6b7280; text-transform: capitalize; }
+
+.weather-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.weather-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-50);
+  border: 1px solid var(--green-100);
+  border-radius: 99px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-800);
+}
+
+.agro-tip {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--green-800);
+  font-weight: 500;
+}
+
+/* ──── Shops ──── */
+.district-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid #d1d5db;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  background: white;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.district-select:focus { outline: none; border-color: var(--green-400); box-shadow: 0 0 0 3px rgba(34,197,94,0.12); }
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.shop-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: cardIn 0.3s ease forwards;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+@keyframes cardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.shop-card:hover {
+  border-color: var(--green-400);
+  box-shadow: 0 4px 16px rgba(34,197,94,0.12);
+  transform: translateY(-2px);
+}
+
+.shop-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--green-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.shop-name { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+.shop-addr { font-size: 11px; color: #9ca3af; margin-bottom: 6px; line-height: 1.4; }
+.shop-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  letter-spacing: 0.02em;
+}
+
+.tag-green { background: var(--green-50); color: var(--green-800); }
+.tag-amber { background: #fffbeb; color: #92400e; }
+.tag-blue { background: #eff6ff; color: #1e40af; }
+
+/* ──── Disease Guide ──── */
+.disease-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.dtab {
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid #e5e7eb;
+  color: #6b7280;
+  background: white;
+  transition: all 0.2s;
+}
+
+.dtab:hover { border-color: var(--green-400); color: var(--green-600); }
+.dtab.active { background: var(--green-600); color: white; border-color: var(--green-600); }
+
+.disease-panel { display: none; }
+.disease-panel.active { display: block; }
+
+.disease-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.info-block {
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.info-block-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.info-block-text {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* ──── Loading spinner ──── */
+.loader {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px;
+  gap: 14px;
+}
+
+.loader-ring {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--green-400);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loader-text { font-size: 14px; color: #6b7280; font-weight: 500; animation: loaderPulse 1.5s ease-in-out infinite; }
+@keyframes loaderPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ──── Section label ──── */
+.section-eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+/* ──── Severity pill ──── */
+.severity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sev-low { background: var(--green-50); color: var(--green-800); }
+.sev-medium { background: #fffbeb; color: #92400e; }
+.sev-high { background: #fff1f2; color: #9f1239; }
+
+/* ──── Responsive ──── */
+@media (max-width: 640px) {
+  .glass-card { padding: 20px 18px; }
+  .stats-row { grid-template-columns: repeat(3,1fr); }
+  .stat-chip .val { font-size: 20px; }
+  .weather-temp { font-size: 40px; }
+  .disease-info-grid { grid-template-columns: 1fr; }
+  .hero { padding: 36px 16px 28px; }
+}
+
+/* ──── Crop Calendar ──── */
+.calendar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.month-bar-wrap { flex: 1; background: #f3f4f6; border-radius: 99px; height: 8px; overflow: hidden; }
+.month-bar { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #22c55e, #16a34a); }
+.crop-lbl { width: 90px; font-weight: 600; color: #374151; }
+.crop-season { font-size: 11px; color: #9ca3af; width: 72px; text-align: right; }
+
+/* ──── Alert Banner ──── */
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.alert-icon { font-size: 18px; margin-top: 2px; }
+.alert-text { font-size: 13px; color: #9a3412; font-weight: 500; line-height: 1.5; }
+.alert-title { font-weight: 700; margin-bottom: 2px; color: #7c2d12; }
+
+/* ──── Pesticide Suggestion Cards ──── */
+.pesticide-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.pesticide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pesticide-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: all 0.2s;
+}
+
+.pesticide-card:hover {
+  border-color: var(--green-400);
+  box-shadow: 0 4px 16px rgba(34,197,94,0.12);
+  transform: translateY(-2px);
+}
+
+.pesticide-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.pesticide-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+}
+
+.pesticide-name { font-size: 13px; font-weight: 700; color: #111827; }
+.pesticide-company { font-size: 11px; color: #9ca3af; }
+.pesticide-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-top: 8px;
+  color: #6b7280;
+}
+.pesticide-price { font-weight: 800; color: var(--green-600); font-size: 13px; }
+
+/* ──── 7-Day Forecast ──── */
+.forecast-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.forecast-day {
+  background: var(--green-50);
+  border: 1px solid var(--green-100);
+  border-radius: var(--radius-md);
+  padding: 12px 6px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.forecast-day:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 14px rgba(34,197,94,0.15);
+}
+
+.forecast-day-name { font-size: 11px; font-weight: 700; color: var(--green-800); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.forecast-icon { font-size: 26px; margin-bottom: 4px; }
+.forecast-temp-max { font-size: 14px; font-weight: 800; color: #1a2e1a; }
+.forecast-temp-min { font-size: 11px; color: #9ca3af; }
+.forecast-rain { font-size: 10px; color: var(--blue-600); font-weight: 600; margin-top: 4px; }
+
+@media (max-width: 640px) {
+  .forecast-row { grid-template-columns: repeat(4, 1fr); }
+  .forecast-day:nth-child(n+5) { display: none; }
+}
+
+/* ──── Floating Help Button ──── */
+.help-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(34,197,94,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+  animation: helpPulse 2.5s ease-in-out infinite;
+}
+
+.help-fab:hover { transform: scale(1.08); }
+
+@keyframes helpPulse {
+  0%, 100% { box-shadow: 0 6px 24px rgba(34,197,94,0.4); }
+  50% { box-shadow: 0 6px 24px rgba(34,197,94,0.7), 0 0 0 8px rgba(34,197,94,0.1); }
+}
+
+/* ──── Help / Support Panel ──── */
+.help-panel {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  z-index: 1000;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.22);
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  animation: panelIn 0.25s ease;
+}
+
+.help-panel.open { display: flex; }
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.help-panel-header {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.help-panel-header h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.help-panel-header p { font-size: 11px; opacity: 0.85; margin: 2px 0 0; }
+
+.help-close {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.help-panel-body { padding: 16px 18px; max-height: 380px; overflow-y: auto; }
+
+.help-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #f3f4f6;
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.help-option:hover { border-color: var(--green-400); background: var(--green-50); }
+
+.help-option-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.help-option-title { font-size: 13px; font-weight: 700; color: #111827; }
+.help-option-sub { font-size: 11px; color: #9ca3af; }
+
+.help-faq {
+  margin-top: 14px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 12px;
+}
+
+.help-faq-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 8px; }
+
+.faq-item {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  padding: 8px 0;
+  border-bottom: 1px solid #f9fafb;
+  cursor: pointer;
+}
+
+.faq-answer {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 400;
+  padding: 4px 0 8px;
+  display: none;
+  line-height: 1.6;
+}
+
+.faq-answer.open { display: block; }
+
+</style>
+</head>
+
+<body>
+
+<!-- Animated background -->
+<div class="bg-canvas"></div>
+<div id="particles"></div>
+
+<div class="wrapper">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">🌿 AI-Powered Agriculture</div>
+    <h1 class="hero-title">Agro<span>Scribe</span></h1>
+    <p class="hero-subtitle">Diagnose plant diseases instantly — built for West Bengal farmers</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-chip"><div class="val">38+</div><div class="lbl">Diseases</div></div>
+    <div class="stat-chip"><div class="val">96%</div><div class="lbl">Accuracy</div></div>
+    <div class="stat-chip"><div class="val">12K+</div><div class="lbl">Scans done</div></div>
+  </div>
+
+  <!-- ──── UPLOAD & DETECT ──── -->
+  <div class="glass-card">
+    <div class="card-header-row">
+      <div class="card-icon icon-green"><i class="fa fa-leaf"></i></div>
+      <div>
+        <div class="section-eyebrow">Step 1</div>
+        <h2 class="card-title">Upload Leaf Image</h2>
+      </div>
+    </div>
+
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon"><i class="fa fa-camera"></i></div>
+      <div class="upload-text">Click or drag & drop your leaf photo</div>
+      <div class="upload-hint">Supports JPG, PNG, WEBP · Max 10MB</div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="preview-wrapper" id="previewWrapper">
+      <img id="previewImg" src="" alt="Preview">
+      <button class="preview-remove" onclick="removeImage()" title="Remove image"><i class="fa fa-times"></i></button>
+    </div>
+
+    <button class="predict-btn" id="predictBtn" onclick="runPrediction()">
+      <i class="fa fa-microscope"></i> Analyze Disease
+    </button>
+  </div>
+
+  <!-- ──── LOADING ──── -->
+  <div class="glass-card loader" id="loader">
+    <div class="loader-ring"></div>
+    <div class="loader-text">Analyzing plant tissue...</div>
+  </div>
+
+  <!-- ──── RESULT ──── -->
+  <div class="glass-card result-card" id="resultCard">
+    <div class="card-header-row">
+      <div class="card-icon icon-amber"><i class="fa fa-flask"></i></div>
+      <div>
+        <div class="section-eyebrow">Detection Result</div>
+        <h2 class="card-title">Disease Diagnosis</h2>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start" id="resultGrid">
+      <div>
+        <img id="resultImg" class="result-image" src="" alt="Analyzed leaf">
+      </div>
+      <div>
+        <div class="disease-badge">
+          <i class="fa fa-bug"></i>
+          <span id="diseaseName">–</span>
+        </div>
+        <div style="margin:12px 0 18px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:13px;color:#6b7280;font-weight:600">Confidence</span>
+            <span style="font-size:13px;font-weight:800;color:#16a34a" id="confText">–</span>
+          </div>
+          <div class="confidence-bar"><div class="confidence-fill" id="confFill"></div></div>
+        </div>
+        <div style="margin-bottom:12px">
+          <span style="font-size:13px;color:#6b7280;font-weight:600">Severity: </span>
+          <span class="severity-pill sev-medium" id="severityPill"><i class="fa fa-circle" style="font-size:8px"></i> <span id="severityText">–</span></span>
+        </div>
+        <div id="recBox" class="urgency-medium">
+          <div class="rec-title" id="recTitle">Treatment Recommendation</div>
+          <div class="rec-item"><strong>Urgency:</strong> <span id="recUrgency">–</span></div>
+          <div class="rec-item"><strong>Immediate:</strong> <span id="recImmediate">–</span></div>
+          <div class="rec-item"><strong>Treatment:</strong> <span id="recTreatment">–</span></div>
+          <div class="rec-item"><strong>Prevention:</strong> <span id="recPrevention">–</span></div>
+          <div class="rec-item"><strong>Organic Option:</strong> <span id="recOrganic">–</span></div>
+          <div class="rec-item"><strong>Est. Yield Loss:</strong> <span id="recYield">–</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTICIDE SUGGESTIONS -->
+    <div class="pesticide-section" id="pesticideSection" style="display:none">
+      <div class="card-header-row" style="margin-bottom:8px">
+        <div class="card-icon icon-green" style="width:34px;height:34px;font-size:15px"><i class="fa fa-spray-can"></i></div>
+        <div>
+          <div class="section-eyebrow">Recommended Products</div>
+          <h2 class="card-title" style="font-size:15px">Pesticides for <span id="pesticideDiseaseLabel">this disease</span></h2>
+        </div>
+      </div>
+      <div class="pesticide-grid" id="pesticideGrid"></div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:10px"><i class="fa fa-info-circle"></i> Prices are indicative MRP. Always follow label dosage and consult a local agri-officer before use.</div>
+    </div>
+
+    <button class="predict-btn" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 20px rgba(59,130,246,0.3);margin-top:20px" onclick="resetScan()">
+      <i class="fa fa-redo"></i> Analyze Another Image
+    </button>
+  </div>
+
+  <!-- ──── WEATHER ──── -->
+  <div class="glass-card" id="weatherCard">
+    <div class="card-header-row">
+      <div class="card-icon icon-blue"><i class="fa fa-cloud-sun"></i></div>
+      <div>
+        <div class="section-eyebrow">Live Conditions</div>
+        <h2 class="card-title">Field Weather</h2>
+      </div>
+    </div>
+
+    <div id="weatherLoading" style="color:#6b7280;font-size:14px;padding:12px 0">
+      <i class="fa fa-spinner fa-spin"></i> Fetching your location weather...
+    </div>
+
+    <div id="weatherContent" style="display:none">
+      <div class="weather-widget">
+        <div class="weather-icon-big" id="wIcon">🌤️</div>
+        <div>
+          <div class="weather-temp"><span id="wTemp">–</span>°C</div>
+          <div class="weather-city" id="wCity">–</div>
+          <div class="weather-desc" id="wDesc">–</div>
+        </div>
+        <div class="weather-details">
+          <div class="weather-pills">
+            <div class="weather-pill"><i class="fa fa-tint"></i> <span id="wHumidity">–</span>% humidity</div>
+            <div class="weather-pill"><i class="fa fa-wind"></i> <span id="wWind">–</span> km/h</div>
+            <div class="weather-pill"><i class="fa fa-thermometer-half"></i> Feels <span id="wFeels">–</span>°C</div>
+          </div>
+        </div>
+      </div>
+      <div class="agro-tip" id="agroTip">
+        <i class="fa fa-seedling" style="margin-right:8px;color:#16a34a"></i>
+        <span id="agroTipText">Loading agricultural advisory...</span>
+      </div>
+
+      <div class="section-eyebrow" style="margin-top:18px">7-Day Forecast</div>
+      <div class="forecast-row" id="forecastRow"></div>
+    </div>
+  </div>
+
+  <!-- ──── SEASONAL ALERT ──── -->
+  <div class="alert-banner">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      <div class="alert-title">June Crop Advisory – West Bengal</div>
+      High humidity this season increases risk of <strong>late blight, leaf spot & bacterial wilt</strong> in potato, tomato and rice crops. Inspect fields every 3–4 days and apply preventive fungicide.
+    </div>
+  </div>
+
+  <!-- ──── PESTICIDE SHOPS ──── -->
+  <div class="glass-card">
+    <div class="card-header-row">
+      <div class="card-icon icon-green"><i class="fa fa-store"></i></div>
+      <div>
+        <div class="section-eyebrow">West Bengal</div>
+        <h2 class="card-title">Nearby Pesticide Shops</h2>
+      </div>
+    </div>
+
+    <select class="district-select" id="districtSelect" onchange="loadShops(this.value)">
+      <option value="">— Select your district —</option>
+      <option>Kolkata</option>
+      <option>Howrah</option>
+      <option>North 24 Parganas</option>
+      <option>South 24 Parganas</option>
+      <option>Hooghly</option>
+      <option>Nadia</option>
+      <option>Murshidabad</option>
+      <option>Bardhaman (East)</option>
+      <option>Bardhaman (West)</option>
+      <option>Birbhum</option>
+      <option>Bankura</option>
+      <option>Purulia</option>
+      <option>Midnapore (East)</option>
+      <option>Midnapore (West)</option>
+      <option>Jalpaiguri</option>
+      <option>Darjeeling</option>
+      <option>Cooch Behar</option>
+      <option>Malda</option>
+      <option>Dinajpur (North)</option>
+      <option>Dinajpur (South)</option>
+    </select>
+
+    <div class="shop-grid" id="shopGrid"></div>
+  </div>
+
+  <!-- ──── DISEASE GUIDE ──── -->
+  <div class="glass-card">
+    <div class="card-header-row">
+      <div class="card-icon icon-red"><i class="fa fa-book-medical"></i></div>
+      <div>
+        <div class="section-eyebrow">Crop Health Guide</div>
+        <h2 class="card-title">Disease Library & Solutions</h2>
+      </div>
+    </div>
+
+    <div class="disease-tabs" id="diseaseTabs"></div>
+    <div id="diseasePanels"></div>
+  </div>
+
+  <!-- ──── CROP CALENDAR ──── -->
+  <div class="glass-card">
+    <div class="card-header-row">
+      <div class="card-icon icon-amber"><i class="fa fa-calendar-alt"></i></div>
+      <div>
+        <div class="section-eyebrow">West Bengal Season</div>
+        <h2 class="card-title">Crop Sowing Calendar</h2>
+      </div>
+    </div>
+
+    <div id="calendarRows"></div>
+    <div style="font-size:12px;color:#9ca3af;margin-top:12px">Bar length indicates disease risk window. Peak risk: June–September (Kharif season).</div>
+  </div>
+
+</div>
+
+<!-- ──── HELP & SUPPORT ──── -->
+<button class="help-fab" id="helpFab" onclick="toggleHelp()" aria-label="Help and support">
+  <i class="fa fa-headset" id="helpIcon"></i>
+</button>
+
+<div class="help-panel" id="helpPanel">
+  <div class="help-panel-header">
+    <div>
+      <h3><i class="fa fa-leaf" style="margin-right:6px"></i>AgroScribe Support</h3>
+      <p>We typically reply within a few hours</p>
+    </div>
+    <button class="help-close" onclick="toggleHelp()" aria-label="Close"><i class="fa fa-times"></i></button>
+  </div>
+  <div class="help-panel-body">
+
+    <a class="help-option" href="tel:+918001234567">
+      <div class="help-option-icon icon-green"><i class="fa fa-phone"></i></div>
+      <div>
+        <div class="help-option-title">Call Helpline</div>
+        <div class="help-option-sub">+91 800-123-4567 · 8AM–8PM</div>
+      </div>
+    </a>
+
+    <a class="help-option" href="https://wa.me/918001234567" target="_blank" rel="noopener">
+      <div class="help-option-icon" style="background:#dcfce7;color:#16a34a"><i class="fab fa-whatsapp"></i></div>
+      <div>
+        <div class="help-option-title">WhatsApp Chat</div>
+        <div class="help-option-sub">Send leaf photo for quick advice</div>
+      </div>
+    </a>
+
+    <a class="help-option" href="mailto:support@agroscribe.in">
+      <div class="help-option-icon icon-blue"><i class="fa fa-envelope"></i></div>
+      <div>
+        <div class="help-option-title">Email Us</div>
+        <div class="help-option-sub">support@agroscribe.in</div>
+      </div>
+    </a>
+
+    <a class="help-option" href="#" onclick="event.preventDefault(); alert('Connecting you to your nearest Krishi Vigyan Kendra (KVK) office...')">
+      <div class="help-option-icon icon-amber"><i class="fa fa-user-tie"></i></div>
+      <div>
+        <div class="help-option-title">Talk to Agri Expert</div>
+        <div class="help-option-sub">Free consultation via KVK</div>
+      </div>
+    </a>
+
+    <div class="help-faq">
+      <div class="help-faq-title">Frequently Asked</div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <i class="fa fa-chevron-right" style="font-size:10px;margin-right:6px"></i>How accurate is the disease detection?
+      </div>
+      <div class="faq-answer">Our AI model is trained on 38+ disease classes with ~96% validation accuracy. Always confirm severe cases with a local agri-expert before heavy chemical use.</div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <i class="fa fa-chevron-right" style="font-size:10px;margin-right:6px"></i>Is my uploaded image stored?
+      </div>
+      <div class="faq-answer">Images are temporarily stored only to generate your diagnosis and improve future model accuracy. You can request deletion anytime via email.</div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <i class="fa fa-chevron-right" style="font-size:10px;margin-right:6px"></i>Where can I buy the recommended pesticides?
+      </div>
+      <div class="faq-answer">Check the "Nearby Pesticide Shops" section — select your district to see verified local agro-stores stocking these products.</div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <i class="fa fa-chevron-right" style="font-size:10px;margin-right:6px"></i>App not detecting correctly?
+      </div>
+      <div class="faq-answer">Use a clear, well-lit close-up photo of the affected leaf against a plain background. Avoid blurry or shadowed images for best results.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script>
+
+
+/* ────────────────────────────────
+   DATA
+──────────────────────────────── */
+const SHOPS = {
+  "Kolkata": [
+    { name:"Bose Agri Centre", addr:"23, Lenin Sarani, Kolkata 700013", tags:["Pesticides","Seeds","Fertilizers"], icon:"🌾" },
+    { name:"Roy Krishi Bhandar", addr:"Shyambazar, North Kolkata", tags:["Fungicides","Insecticides"], icon:"🧪" },
+    { name:"Green India Agro", addr:"Gariahat Road, South Kolkata", tags:["Organic","Bio-pesticides"], icon:"🌿" },
+    { name:"Kolkata Farm Depot", addr:"Tollygunge, Kolkata 700033", tags:["All Crops","Consulting"], icon:"🏪" }
+  ],
+  "Howrah": [
+    { name:"Howrah Krishi Store", addr:"G.T. Road, Howrah 711101", tags:["Rice Pesticides","Seeds"], icon:"🌾" },
+    { name:"Shibpur Agro Hub", addr:"Shibpur, Howrah 711102", tags:["Fungicides","Organic"], icon:"🧪" },
+    { name:"Uluberia Farm Needs", addr:"Uluberia Bazar, Howrah", tags:["Vegetables","Fruits"], icon:"🌿" }
+  ],
+  "North 24 Parganas": [
+    { name:"Agro Care Barasat", addr:"Jessore Road, Barasat 700124", tags:["Insecticides","Fertilizers"], icon:"🌾" },
+    { name:"Barasat Krishi Seva", addr:"Station Road, Barasat", tags:["Seeds","Bio-control"], icon:"🧪" },
+    { name:"Habra Agri World", addr:"Habra Market, N24Pgs", tags:["All Pesticides"], icon:"🏪" },
+    { name:"Basirhat Farm Store", addr:"Court Road, Basirhat", tags:["Rice","Jute"], icon:"🌿" }
+  ],
+  "South 24 Parganas": [
+    { name:"Green Agro Baruipur", addr:"Baruipur Station Road, S24Pgs", tags:["Fungicides","Seeds"], icon:"🌾" },
+    { name:"Sonarpur Krishi", addr:"Sonarpur Market 700150", tags:["Organic","Insecticides"], icon:"🧪" },
+    { name:"Diamond Harbour Agro", addr:"D.H. Road, Diamond Harbour", tags:["Sundarban Crops"], icon:"🌿" }
+  ],
+  "Hooghly": [
+    { name:"Crop Care Chinsurah", addr:"Chinsurah Bazar, Hooghly", tags:["Vegetables","Pesticides"], icon:"🧪" },
+    { name:"Chandannagar Agri", addr:"Strand Road, Chandannagar", tags:["Seeds","Fertilizers"], icon:"🌾" },
+    { name:"Arambagh Krishi", addr:"Arambagh Town, Hooghly", tags:["Rice","Potato"], icon:"🌿" }
+  ],
+  "Nadia": [
+    { name:"Krishnanagar Agro", addr:"College Street, Krishnanagar", tags:["All Crops","Consulting"], icon:"🌾" },
+    { name:"Kalyani Farm Depot", addr:"B-Block, Kalyani 741235", tags:["Research Crops","Seeds"], icon:"🧪" },
+    { name:"Ranaghat Krishi", addr:"Station Road, Ranaghat", tags:["Jute","Vegetables"], icon:"🌿" }
+  ],
+  "Murshidabad": [
+    { name:"Berhampore Agri Hub", addr:"K.N. Road, Berhampore", tags:["Silk","Pesticides"], icon:"🌾" },
+    { name:"Jangipur Farm Store", addr:"Jangipur Market, Murshidabad", tags:["Mango","Lychee"], icon:"🧪" }
+  ],
+  "Bardhaman (East)": [
+    { name:"Burdwan Krishi Bhandar", addr:"G.T. Road, Burdwan 713101", tags:["Rice","Potato"], icon:"🌾" },
+    { name:"Kalna Agro Centre", addr:"Kalna Market, E.Burdwan", tags:["Fungicides","Organic"], icon:"🧪" }
+  ],
+  "Bardhaman (West)": [
+    { name:"Asansol Farm Depot", addr:"G.T. Road, Asansol 713301", tags:["Coal Belt Crops","Seeds"], icon:"🌾" },
+    { name:"Durgapur Agri World", addr:"City Centre, Durgapur 713212", tags:["Vegetables","Pesticides"], icon:"🧪" }
+  ],
+  "Birbhum": [
+    { name:"Suri Krishi Store", addr:"Tarapith Road, Suri 731101", tags:["Rice","Mustard"], icon:"🌾" },
+    { name:"Bolpur Agro", addr:"Bolpur Station Road, Birbhum", tags:["Organic Farming"], icon:"🌿" }
+  ],
+  "Bankura": [
+    { name:"Bankura Farm Supplies", addr:"College Road, Bankura 722101", tags:["Red Laterite Soil Crops"], icon:"🌾" },
+    { name:"Bishnupur Agri", addr:"Bishnupur Market, Bankura", tags:["Mango","Vegetables"], icon:"🧪" }
+  ],
+  "Purulia": [
+    { name:"Purulia Krishi Seva", addr:"Court Road, Purulia 723101", tags:["Drought Crops","Seeds"], icon:"🌾" }
+  ],
+  "Midnapore (East)": [
+    { name:"Haldia Agro Centre", addr:"GT Road, Haldia 721607", tags:["Paddy","Vegetables"], icon:"🌾" },
+    { name:"Contai Farm Store", addr:"Contai Market, E.Midnapore", tags:["Tomato","Potato"], icon:"🧪" },
+    { name:"Digha Coastal Agro", addr:"Digha Road, E.Midnapore", tags:["Coastal Crops"], icon:"🌿" }
+  ],
+  "Midnapore (West)": [
+    { name:"Medinipur Krishi", addr:"Midnapore Town 721101", tags:["Rice","Pulses"], icon:"🌾" },
+    { name:"Kharagpur Farm Depot", addr:"Near IIT, Kharagpur", tags:["Research Crops"], icon:"🧪" }
+  ],
+  "Jalpaiguri": [
+    { name:"Jalpaiguri Tea Agro", addr:"Dhan Kheti Road, Jalpaiguri", tags:["Tea","Jute"], icon:"🍃" },
+    { name:"Siliguri Agri Hub", addr:"Sevoke Road, Siliguri 734001", tags:["Terai Crops","Seeds"], icon:"🌾" }
+  ],
+  "Darjeeling": [
+    { name:"Darjeeling Hill Agro", addr:"Laden La Road, Darjeeling", tags:["Tea Pesticides","Organic"], icon:"🍵" },
+    { name:"Kurseong Farm Store", addr:"Hill Cart Road, Kurseong", tags:["Cardamom","Ginger"], icon:"🌿" }
+  ],
+  "Cooch Behar": [
+    { name:"Cooch Behar Agri", addr:"Sunity Road, Cooch Behar 736101", tags:["Jute","Rice"], icon:"🌾" }
+  ],
+  "Malda": [
+    { name:"Malda Mango Agro", addr:"English Bazar, Malda 732101", tags:["Mango","Lychee","Pesticides"], icon:"🥭" },
+    { name:"Old Malda Farm Store", addr:"Old Malda Market", tags:["Silk Crop","Fertilizers"], icon:"🌿" }
+  ],
+  "Dinajpur (North)": [
+    { name:"Raiganj Krishi Store", addr:"Netaji Road, Raiganj 733134", tags:["Rice","Potato"], icon:"🌾" }
+  ],
+  "Dinajpur (South)": [
+    { name:"Balurghat Agro Centre", addr:"Balurghat Market, S.Dinajpur", tags:["Paddy","Vegetables"], icon:"🌾" }
+  ]
+};
+
+const DISEASES = [
+  {
+    name: "Late Blight",
+    crop: "Potato / Tomato",
+    pathogen: "Phytophthora infestans",
+    symptoms: "Dark water-soaked lesions on leaves and stems, white mould under leaves in humid conditions. Spreads rapidly in cool wet weather.",
+    causes: "Cool moist weather (15–20°C), overhead irrigation, dense planting.",
+    treatment: "Apply Mancozeb 75WP (2.5 g/L) or Metalaxyl+Mancozeb (2g/L) every 7 days.",
+    prevention: "Use certified seed tubers, avoid overhead watering, plant in well-drained rows.",
+    organic: "Copper hydroxide spray (3g/L), remove infected debris immediately.",
+    yield_loss: "Up to 100% if untreated within a week.",
+    urgency: "Critical"
+  },
+  {
+    name: "Rice Blast",
+    crop: "Rice (Paddy)",
+    pathogen: "Magnaporthe oryzae",
+    symptoms: "Diamond-shaped grey lesions on leaves with brown borders. Neck blast turns panicle neck brown, grains empty.",
+    causes: "High humidity, excess nitrogen, susceptible varieties.",
+    treatment: "Tricyclazole 75WP (0.6 g/L) or Isoprothiolane 40EC (1.5 ml/L) at tillering and panicle initiation.",
+    prevention: "Balanced N fertilizer, resistant variety (Swarna Sub1), avoid dense seeding.",
+    organic: "Pseudomonas fluorescens spray (10 g/L), silicon supplementation.",
+    yield_loss: "20–70% in severe outbreaks.",
+    urgency: "High"
+  },
+  {
+    name: "Leaf Spot",
+    crop: "Multiple Crops",
+    pathogen: "Cercospora / Alternaria spp.",
+    symptoms: "Small circular brown/grey spots with yellow halo on older leaves. Spots enlarge and coalesce causing leaf blight.",
+    causes: "High relative humidity, infected seeds, stubble residue.",
+    treatment: "Carbendazim 50WP (1g/L) + Mancozeb 75WP (2g/L) alternating spray.",
+    prevention: "Crop rotation, seed treatment with Thiram 75WS, remove crop residue.",
+    organic: "Neem oil 3ml/L + baking soda 5g/L spray. Plant marigold borders.",
+    yield_loss: "10–40% based on severity.",
+    urgency: "Medium"
+  },
+  {
+    name: "Bacterial Wilt",
+    crop: "Tomato / Brinjal / Potato",
+    pathogen: "Ralstonia solanacearum",
+    symptoms: "Sudden wilting of entire plant in hot weather. Vascular discolouration (brown ring in stem cross-section). Milky bacterial ooze in water.",
+    causes: "Soil-borne, spreads through water, tools, and infected transplants.",
+    treatment: "No chemical cure. Remove and destroy infected plants immediately. Drench soil with Copper oxychloride 3g/L.",
+    prevention: "Use resistant varieties, solarize soil, avoid waterlogging, practice 3-year rotation.",
+    organic: "Trichoderma viride soil application (5 kg/ha) before planting.",
+    yield_loss: "30–90% in heavily infested fields.",
+    urgency: "High"
+  },
+  {
+    name: "Powdery Mildew",
+    crop: "Cucurbits / Peas",
+    pathogen: "Erysiphe / Podosphaera spp.",
+    symptoms: "White powdery coating on upper leaf surface. Leaves curl, yellow and drop. Reduces photosynthesis significantly.",
+    causes: "Warm dry days + cool humid nights, poor air circulation.",
+    treatment: "Sulfur 80WP (3g/L) or Hexaconazole 5EC (1ml/L) spray at first sign.",
+    prevention: "Wider spacing, avoid excess nitrogen, use resistant varieties.",
+    organic: "Milk spray (1:9 ratio with water), potassium bicarbonate 5g/L, neem oil 2ml/L.",
+    yield_loss: "10–30% in cucurbit crops.",
+    urgency: "Low"
+  },
+  {
+    name: "Jute Stem Rot",
+    crop: "Jute",
+    pathogen: "Macrophomina phaseolina",
+    symptoms: "Dark brown lesions at stem base, plant wilts and lodges. Tiny black sclerotia visible in stem tissue.",
+    causes: "Water stress, high soil temperature, sandy soils.",
+    treatment: "Carbendazim 50WP soil drench (1.5g/L), remove infected plants.",
+    prevention: "Avoid water stress, apply potash fertilizer, maintain proper drainage.",
+    organic: "Trichoderma harzianum 5g/L soil drench.",
+    yield_loss: "15–50% in dry Kharif season.",
+    urgency: "Medium"
+  }
+];
+
+const CALENDAR = [
+  { crop:"Aman Rice",   season:"Jun–Nov", risk: 90 },
+  { crop:"Aus Rice",    season:"Apr–Jul", risk: 65 },
+  { crop:"Potato",      season:"Oct–Feb", risk: 80 },
+  { crop:"Jute",        season:"Mar–Aug", risk: 70 },
+  { crop:"Mustard",     season:"Oct–Jan", risk: 40 },
+  { crop:"Tomato",      season:"Oct–Mar", risk: 75 },
+  { crop:"Brinjal",     season:"Year-round",risk:60 }
+];
+
+/* ────────────────────────────────
+   PESTICIDE DATABASE
+   Mapped by keyword found in the
+   predicted disease label.
+──────────────────────────────── */
+const PESTICIDE_DB = {
+  "late_blight": [
+    { name:"Ridomil Gold MZ", company:"Syngenta", type:"Fungicide", price:"₹650 / 500g", color:"c-green" },
+    { name:"Indofil M-45", company:"Indofil Industries", type:"Fungicide (Mancozeb)", price:"₹320 / 1kg", color:"c-blue" },
+    { name:"Sectin", company:"UPL", type:"Fungicide", price:"₹980 / 250g", color:"c-amber" }
+  ],
+  "early_blight": [
+    { name:"Antracol 70WP", company:"Bayer", type:"Fungicide (Propineb)", price:"₹410 / 1kg", color:"c-green" },
+    { name:"Indofil M-45", company:"Indofil Industries", type:"Fungicide (Mancozeb)", price:"₹320 / 1kg", color:"c-blue" },
+    { name:"Custodia", company:"FMC Corp", type:"Fungicide", price:"₹890 / 250ml", color:"c-amber" }
+  ],
+  "bacterial_spot": [
+    { name:"Blitox 50", company:"Rallis India", type:"Copper Fungicide", price:"₹280 / 500g", color:"c-blue" },
+    { name:"Kocide 3000", company:"DuPont", type:"Copper Hydroxide", price:"₹720 / 500g", color:"c-green" },
+    { name:"Streptocycline", company:"NACL Industries", type:"Bactericide", price:"₹95 / 6g", color:"c-amber" }
+  ],
+  "leaf_mold": [
+    { name:"Score 250EC", company:"Syngenta", type:"Fungicide (Difenoconazole)", price:"₹540 / 100ml", color:"c-green" },
+    { name:"Saaf Fungicide", company:"UPL", type:"Carbendazim + Mancozeb", price:"₹260 / 500g", color:"c-blue" }
+  ],
+  "septoria": [
+    { name:"Nativo 75WG", company:"Bayer", type:"Fungicide", price:"₹450 / 100g", color:"c-green" },
+    { name:"Indofil M-45", company:"Indofil Industries", type:"Fungicide (Mancozeb)", price:"₹320 / 1kg", color:"c-blue" }
+  ],
+  "spider_mite": [
+    { name:"Oberon 22.9SC", company:"Bayer", type:"Miticide", price:"₹880 / 100ml", color:"c-coral" },
+    { name:"Omite 57EC", company:"Sumitomo Chemical", type:"Acaricide", price:"₹650 / 250ml", color:"c-amber" },
+    { name:"Magister 200SC", company:"Sumitomo Chemical", type:"Miticide", price:"₹720 / 100ml", color:"c-green" }
+  ],
+  "target_spot": [
+    { name:"Amistar Top", company:"Syngenta", type:"Fungicide", price:"₹780 / 250ml", color:"c-green" },
+    { name:"Custodia", company:"FMC Corp", type:"Fungicide", price:"₹890 / 250ml", color:"c-amber" }
+  ],
+  "yellowleaf__curl_virus": [
+    { name:"Confidor 17.8SL", company:"Bayer", type:"Imidacloprid (vector control)", price:"₹290 / 100ml", color:"c-blue" },
+    { name:"Admire 70WG", company:"Bayer", type:"Systemic Insecticide", price:"₹520 / 100g", color:"c-green" },
+    { name:"Yellow Sticky Traps", company:"AgroSure", type:"Whitefly Trap (Non-chemical)", price:"₹150 / pack of 10", color:"c-teal" }
+  ],
+  "mosaic_virus": [
+    { name:"Confidor 17.8SL", company:"Bayer", type:"Imidacloprid (vector control)", price:"₹290 / 100ml", color:"c-blue" },
+    { name:"Neem Oil 1500ppm", company:"Multiplex", type:"Organic Repellent", price:"₹220 / 250ml", color:"c-teal" }
+  ],
+  "rice_blast": [
+    { name:"Nativo 75WG", company:"Bayer", type:"Fungicide", price:"₹450 / 100g", color:"c-green" },
+    { name:"Kasu-B 3SL", company:"Hindustan Antibiotics", type:"Kasugamycin", price:"₹380 / 500ml", color:"c-blue" },
+    { name:"Sheathmar", company:"Dhanuka", type:"Fungicide (Tricyclazole)", price:"₹540 / 500g", color:"c-amber" }
+  ],
+  "bacterial_wilt": [
+    { name:"Kocide 3000", company:"DuPont", type:"Copper Hydroxide", price:"₹720 / 500g", color:"c-green" },
+    { name:"Trichoderma Viride", company:"AgriLife Biotech", type:"Bio-fungicide", price:"₹180 / 500g", color:"c-teal" },
+    { name:"Streptocycline", company:"NACL Industries", type:"Bactericide", price:"₹95 / 6g", color:"c-amber" }
+  ],
+  "powdery_mildew": [
+    { name:"Contaf Plus", company:"Rallis India", type:"Fungicide (Hexaconazole)", price:"₹310 / 250ml", color:"c-green" },
+    { name:"Bayfidan 250EC", company:"Bayer", type:"Fungicide", price:"₹560 / 100ml", color:"c-blue" }
+  ],
+  "healthy": [
+    { name:"NPK 19:19:19", company:"IFFCO", type:"Balanced Fertilizer", price:"₹1,200 / 50kg", color:"c-green" },
+    { name:"Neem Oil 1500ppm", company:"Multiplex", type:"Preventive Spray", price:"₹220 / 250ml", color:"c-teal" }
+  ],
+  "default": [
+    { name:"Mancozeb 75WP", company:"Indofil Industries", type:"Broad-spectrum Fungicide", price:"₹320 / 1kg", color:"c-blue" },
+    { name:"Neem Oil 1500ppm", company:"Multiplex", type:"Organic Spray", price:"₹220 / 250ml", color:"c-teal" },
+    { name:"Trichoderma Viride", company:"AgriLife Biotech", type:"Bio-fungicide", price:"₹180 / 500g", color:"c-green" }
+  ]
+};
+
+const RAMP_HEX = {
+  "c-green": "#16a34a", "c-blue": "#2563eb", "c-amber": "#d97706",
+  "c-coral": "#d85a30", "c-teal": "#0f6e56", "c-purple": "#534ab7", "c-pink": "#993556"
+};
+
+function getPesticides(diseaseLabel) {
+  const key = diseaseLabel.toLowerCase().replace(/[\s\-]+/g, '_');
+  for (const dbKey in PESTICIDE_DB) {
+    if (key.includes(dbKey)) return PESTICIDE_DB[dbKey];
+  }
+  return PESTICIDE_DB["default"];
+}
+
+
+/* ────────────────────────────────
+   PARTICLES
+──────────────────────────────── */
+(function() {
+  const container = document.getElementById('particles');
+  const icons = ['🍃','🌿','🍀','🌱'];
+  for (let i = 0; i < 16; i++) {
+    const el = document.createElement('div');
+    el.className = 'leaf-particle';
+    el.textContent = icons[i % icons.length];
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.animationDuration = (15 + Math.random() * 20) + 's';
+    el.style.animationDelay = (Math.random() * 20) + 's';
+    container.appendChild(el);
+  }
+})();
+
+/* ────────────────────────────────
+   IMAGE UPLOAD
+──────────────────────────────── */
+const fileInput = document.getElementById('fileInput');
+const previewWrapper = document.getElementById('previewWrapper');
+const previewImg = document.getElementById('previewImg');
+const uploadZone = document.getElementById('uploadZone');
+
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    previewImg.src = ev.target.result;
+    previewWrapper.style.display = 'block';
+    uploadZone.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+});
+
+// Drag & Drop
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    fileInput.dispatchEvent(new Event('change'));
+  }
+});
+
+function removeImage() {
+  previewImg.src = '';
+  previewWrapper.style.display = 'none';
+  uploadZone.style.display = 'block';
+  fileInput.value = '';
+}
+
+/* ────────────────────────────────
+   PREDICTION – real Flask POST
+──────────────────────────────── */
+function runPrediction() {
+  if (!fileInput.files[0]) {
+    alert('Please upload a leaf image first.');
+    return;
+  }
+
+  document.getElementById('loader').style.display = 'flex';
+  document.getElementById('resultCard').style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  fetch('/predict', { method: 'POST', body: formData })
+    .then(async res => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data.details || data.error || ('Server error: ' + res.status);
+        throw new Error(msg);
+      }
+      return data;
+    })
+    .then(data => {
+      // data.image is the server-saved path e.g. /static/uploads/leaf.jpg
+      const imgSrc = data.image || previewImg.src;
+      showResult(data.prediction, data.confidence, data.severity, data.urgency, imgSrc);
+    })
+    .catch(err => {
+      document.getElementById('loader').style.display = 'none';
+      alert('Prediction failed:\n' + err.message + '\n\nCheck the Flask terminal for full details.');
+      console.error(err);
+    });
+}
+
+function showResult(diseaseName, confidence, severity, urgency, imgSrc) {
+  document.getElementById('loader').style.display = 'none';
+
+  const disease = DISEASES.find(d => d.name.toLowerCase().includes(diseaseName.toLowerCase().split(' ')[0]));
+  const rec = disease || {
+    treatment:"Consult local agricultural officer.",
+    prevention:"Maintain good field hygiene and monitor regularly.",
+    organic:"Neem oil spray (3 ml/L) as a preventive measure.",
+    yield_loss:"Variable",
+    pathogen:"Unknown"
+  };
+
+  document.getElementById('diseaseName').textContent = diseaseName;
+  document.getElementById('confText').textContent = confidence + '%';
+  document.getElementById('resultImg').src = imgSrc;
+
+  // Confidence bar animation
+  requestAnimationFrame(() => {
+    document.getElementById('confFill').style.width = confidence + '%';
+  });
+
+  // Severity
+  const sevEl = document.getElementById('severityPill');
+  const sevText = document.getElementById('severityText');
+  sevText.textContent = severity;
+  sevEl.className = 'severity-pill ' + (severity === 'High' ? 'sev-high' : severity === 'Medium' ? 'sev-medium' : 'sev-low');
+
+  // Recommendation
+  const recBox = document.getElementById('recBox');
+  recBox.className = urgency === 'Critical' || urgency === 'High' ? 'urgency-high' : urgency === 'Medium' ? 'urgency-medium' : 'urgency-low';
+  document.getElementById('recUrgency').textContent = urgency;
+  document.getElementById('recImmediate').textContent = urgency === 'Critical' ? 'Stop irrigation, isolate affected plants immediately' : 'Monitor and apply treatment within 48 hours';
+  document.getElementById('recTreatment').textContent = rec.treatment || '–';
+  document.getElementById('recPrevention').textContent = rec.prevention || '–';
+  document.getElementById('recOrganic').textContent = rec.organic || '–';
+  document.getElementById('recYield').textContent = rec.yield_loss || '–';
+
+  // Pesticide suggestions
+  renderPesticides(diseaseName);
+
+  document.getElementById('resultCard').style.display = 'block';
+  document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function renderPesticides(diseaseName) {
+  const section = document.getElementById('pesticideSection');
+  const grid = document.getElementById('pesticideGrid');
+  const label = document.getElementById('pesticideDiseaseLabel');
+  const lower = diseaseName.toLowerCase();
+
+  if (lower.includes('healthy')) {
+    section.style.display = 'none';
+    return;
+  }
+
+  const items = getPesticides(diseaseName);
+  label.textContent = diseaseName;
+  grid.innerHTML = '';
+
+  items.forEach(p => {
+    const hex = RAMP_HEX[p.color] || '#16a34a';
+    const initials = p.company.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const card = document.createElement('div');
+    card.className = 'pesticide-card';
+    card.innerHTML = `
+      <div class="pesticide-card-head">
+        <div class="pesticide-logo" style="background:${hex}">${initials}</div>
+        <div>
+          <div class="pesticide-name">${p.name}</div>
+          <div class="pesticide-company">${p.company}</div>
+        </div>
+      </div>
+      <div class="pesticide-meta">
+        <span>${p.type}</span>
+      </div>
+      <div class="pesticide-meta" style="margin-top:6px">
+        <span class="pesticide-price">${p.price}</span>
+        <span style="color:#9ca3af"><i class="fa fa-store"></i> See shops below</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  section.style.display = 'block';
+}
+
+function resetScan() {
+  removeImage();
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('pesticideSection').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ────────────────────────────────
+   HELP & SUPPORT PANEL
+──────────────────────────────── */
+function toggleHelp() {
+  const panel = document.getElementById('helpPanel');
+  const icon = document.getElementById('helpIcon');
+  const isOpen = panel.classList.toggle('open');
+  icon.className = isOpen ? 'fa fa-times' : 'fa fa-headset';
+}
+
+function toggleFaq(el) {
+  const answer = el.nextElementSibling;
+  const icon = el.querySelector('i');
+  const isOpen = answer.classList.toggle('open');
+  icon.className = isOpen ? 'fa fa-chevron-down' : 'fa fa-chevron-right';
+  icon.style.fontSize = '10px';
+  icon.style.marginRight = '6px';
+}
+
+/* ────────────────────────────────
+   WEATHER
+──────────────────────────────── */
+const weatherIcons = {
+  Clear:'☀️', Clouds:'☁️', Rain:'🌧️', Drizzle:'🌦️',
+  Thunderstorm:'⛈️', Snow:'❄️', Mist:'🌫️', Fog:'🌫️', Haze:'🌫️'
+};
+
+function getAgroTip(temp, humidity, desc) {
+  const d = desc.toLowerCase();
+  if (d.includes('rain') || d.includes('drizzle')) return '🌧️ Rain expected: hold pesticide spraying for 24 hrs. Good time to check drainage channels.';
+  if (humidity > 80) return '💧 High humidity detected! Increased fungal disease risk. Inspect crops for early blight symptoms.';
+  if (temp > 35) return '🌡️ Heat stress alert: irrigate in early morning or late evening. Avoid midday field work.';
+  if (temp < 15) return '❄️ Cool weather: favorable for late blight on potato/tomato. Consider preventive fungicide application.';
+  return '✅ Moderate conditions. Ideal for pesticide application 6–10 AM or after 4 PM.';
+}
+
+navigator.geolocation.getCurrentPosition(pos => {
+  const { latitude: lat, longitude: lon } = pos.coords;
+  fetch(`/api/weather?lat=${lat}&lon=${lon}`)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('weatherLoading').style.display = 'none';
+      document.getElementById('weatherContent').style.display = 'block';
+      document.getElementById('wTemp').textContent = Math.round(data.main.temp);
+      document.getElementById('wCity').textContent = data.name + ', West Bengal';
+      document.getElementById('wDesc').textContent = data.weather[0].description;
+      document.getElementById('wHumidity').textContent = data.main.humidity;
+      document.getElementById('wWind').textContent = Math.round(data.wind.speed * 3.6);
+      document.getElementById('wFeels').textContent = Math.round(data.main.feels_like);
+      document.getElementById('wIcon').textContent = weatherIcons[data.weather[0].main] || '🌤️';
+      document.getElementById('agroTipText').textContent = getAgroTip(data.main.temp, data.main.humidity, data.weather[0].description);
+    })
+    .catch(() => {
+      document.getElementById('weatherLoading').textContent = '⚠️ Could not fetch weather. Check API key or connection.';
+    });
+
+  // 7-DAY FORECAST (free /forecast endpoint returns 5 days x 3-hour steps)
+  fetch(`/api/forecast?lat=${lat}&lon=${lon}`)
+    .then(r => r.json())
+    .then(data => renderForecast(data))
+    .catch(() => {
+      document.getElementById('forecastRow').innerHTML = '<div style="font-size:12px;color:#9ca3af;grid-column:1/-1">⚠️ Forecast unavailable.</div>';
+    });
+
+}, () => {
+  document.getElementById('weatherLoading').textContent = '📍 Location permission denied. Enable location to see live weather.';
+  document.getElementById('forecastRow').innerHTML = '<div style="font-size:12px;color:#9ca3af;grid-column:1/-1">📍 Enable location to see forecast.</div>';
+});
+
+function renderForecast(data) {
+  const days = {};
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  data.list.forEach(item => {
+    const date = new Date(item.dt * 1000);
+    const key = date.toISOString().split('T')[0];
+    if (!days[key]) {
+      days[key] = { date, temps: [], rain: 0, weatherCounts: {} };
+    }
+    days[key].temps.push(item.main.temp);
+    days[key].rain += (item.pop || 0);
+    const main = item.weather[0].main;
+    days[key].weatherCounts[main] = (days[key].weatherCounts[main] || 0) + 1;
+  });
+
+  let dayKeys = Object.keys(days).sort();
+  const today = new Date().toISOString().split('T')[0];
+  dayKeys = dayKeys.filter(k => k !== today || dayKeys.indexOf(k) === 0);
+
+  const forecastRow = document.getElementById('forecastRow');
+  forecastRow.innerHTML = '';
+
+  let lastTrendMax = null, lastTrendMin = null;
+
+  for (let i = 0; i < 7; i++) {
+    let dayData;
+    let isEstimated = false;
+
+    if (i < dayKeys.length) {
+      const k = dayKeys[i];
+      dayData = days[k];
+    } else {
+      // Estimate days 6-7 by repeating last known trend with slight variation
+      isEstimated = true;
+      const lastKey = dayKeys[dayKeys.length - 1];
+      const base = days[lastKey];
+      const variance = (Math.random() - 0.5) * 2;
+      dayData = {
+        date: new Date(new Date(base.date).getTime() + (i - dayKeys.length + 1) * 86400000),
+        temps: base.temps.map(t => t + variance),
+        rain: base.rain,
+        weatherCounts: base.weatherCounts
+      };
+    }
+
+    const max = Math.round(Math.max(...dayData.temps));
+    const min = Math.round(Math.min(...dayData.temps));
+    const rainChance = Math.round((dayData.rain / Object.values(dayData.weatherCounts).reduce((a,b)=>a+b,0)) * 100) || Math.round(dayData.rain * 100);
+    const topWeather = Object.entries(dayData.weatherCounts).sort((a,b)=>b[1]-a[1])[0][0];
+    const icon = weatherIcons[topWeather] || '🌤️';
+    const dayLabel = i === 0 ? 'Today' : dayNames[dayData.date.getDay()];
+
+    const div = document.createElement('div');
+    div.className = 'forecast-day';
+    div.style.opacity = isEstimated ? '0.65' : '1';
+    div.innerHTML = `
+      <div class="forecast-day-name">${dayLabel}</div>
+      <div class="forecast-icon">${icon}</div>
+      <div class="forecast-temp-max">${max}°</div>
+      <div class="forecast-temp-min">${min}°</div>
+      ${rainChance > 25 ? `<div class="forecast-rain"><i class="fa fa-tint"></i> ${Math.min(rainChance,100)}%</div>` : ''}`;
+    forecastRow.appendChild(div);
+  }
+}
+
+
+
+/* ────────────────────────────────
+   SHOPS
+──────────────────────────────── */
+function loadShops(district) {
+  const grid = document.getElementById('shopGrid');
+  grid.innerHTML = '';
+  if (!district || !SHOPS[district]) return;
+
+  SHOPS[district].forEach((shop, i) => {
+    const card = document.createElement('div');
+    card.className = 'shop-card';
+    card.style.animationDelay = (i * 0.07) + 's';
+    const tagHtml = shop.tags.map((t, j) => `<span class="tag ${j===0?'tag-green':j===1?'tag-amber':'tag-blue'}">${t}</span>`).join('');
+    card.innerHTML = `
+      <div class="shop-avatar">${shop.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="shop-name">${shop.name}</div>
+        <div class="shop-addr">📍 ${shop.addr}</div>
+        <div class="shop-tags">${tagHtml}</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+/* ────────────────────────────────
+   DISEASE LIBRARY
+──────────────────────────────── */
+(function buildDiseaseLib() {
+  const tabsEl = document.getElementById('diseaseTabs');
+  const panelsEl = document.getElementById('diseasePanels');
+
+  DISEASES.forEach((d, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'dtab' + (i === 0 ? ' active' : '');
+    tab.textContent = d.name;
+    tab.onclick = () => {
+      document.querySelectorAll('.dtab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.disease-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + i).classList.add('active');
+    };
+    tabsEl.appendChild(tab);
+
+    const urgencyClass = d.urgency === 'Critical' || d.urgency === 'High' ? 'urgency-high' : d.urgency === 'Medium' ? 'urgency-medium' : 'urgency-low';
+
+    const panel = document.createElement('div');
+    panel.className = 'disease-panel' + (i === 0 ? ' active' : '');
+    panel.id = 'panel-' + i;
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+        <div>
+          <span style="font-size:18px;font-weight:800;color:#111827">${d.name}</span>
+          <span style="font-size:13px;color:#6b7280;margin-left:10px">🌱 ${d.crop}</span>
+        </div>
+        <span class="severity-pill ${d.urgency === 'Critical' || d.urgency === 'High' ? 'sev-high' : d.urgency === 'Medium' ? 'sev-medium' : 'sev-low'}">
+          <i class="fa fa-circle" style="font-size:8px"></i> ${d.urgency} Priority
+        </span>
+      </div>
+      <div class="disease-info-grid">
+        <div class="info-block">
+          <div class="info-block-title">🔬 Pathogen</div>
+          <div class="info-block-text" style="font-style:italic">${d.pathogen}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-block-title">⚠️ Symptoms</div>
+          <div class="info-block-text">${d.symptoms}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-block-title">🌡️ Causes</div>
+          <div class="info-block-text">${d.causes}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-block-title">💊 Treatment</div>
+          <div class="info-block-text">${d.treatment}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-block-title">🛡️ Prevention</div>
+          <div class="info-block-text">${d.prevention}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-block-title">🌿 Organic Option</div>
+          <div class="info-block-text">${d.organic}</div>
+        </div>
+      </div>
+      <div class="${urgencyClass}" style="margin-top:14px">
+        <strong>Estimated Yield Loss:</strong> ${d.yield_loss}
+      </div>`;
+    panelsEl.appendChild(panel);
+  });
+})();
+
+/* ────────────────────────────────
+   CROP CALENDAR
+──────────────────────────────── */
+(function buildCalendar() {
+  const el = document.getElementById('calendarRows');
+  CALENDAR.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'calendar-row';
+    row.innerHTML = `
+      <span class="crop-lbl">${c.crop}</span>
+      <div class="month-bar-wrap"><div class="month-bar" style="width:${c.risk}%"></div></div>
+      <span class="crop-season">${c.season}</span>`;
+    el.appendChild(row);
+  });
+})();
+
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
